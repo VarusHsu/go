@@ -4502,11 +4502,14 @@ func newproc1(fn *funcval, callergp *g, callerpc uintptr) *g {
 	mp := acquirem() // disable preemption because we hold M and P in local vars.
 	pp := mp.p.ptr()
 	newg := gfget(pp)
+	// 没有可用的g，创建一个新的g
 	if newg == nil {
 		newg = malg(stackMin)
 		casgstatus(newg, _Gidle, _Gdead)
 		allgadd(newg) // publishes with a g->status of Gdead so GC scanner doesn't look at uninitialized stack.
 	}
+
+	// 两个断言确认，一般情况下都是true
 	if newg.stack.hi == 0 {
 		throw("newproc1: newg missing stack")
 	}
@@ -4525,12 +4528,14 @@ func newproc1(fn *funcval, callergp *g, callerpc uintptr) *g {
 		prepGoExitFrame(sp)
 		spArg += sys.MinFrameSize
 	}
-
+	// 清除newg的sched字段 sched用于保存恢复g的上下文，
 	memclrNoHeapPointers(unsafe.Pointer(&newg.sched), unsafe.Sizeof(newg.sched))
+	// 初始化newg的sched字段
 	newg.sched.sp = sp
 	newg.stktopsp = sp
 	newg.sched.pc = abi.FuncPCABI0(goexit) + sys.PCQuantum // +PCQuantum so that previous instruction is in same function
 	newg.sched.g = guintptr(unsafe.Pointer(newg))
+	// 调用用户的函数
 	gostartcallfn(&newg.sched, fn)
 	newg.parentGoid = callergp.goid
 	newg.gopc = callerpc
@@ -4694,8 +4699,11 @@ retry:
 		// 这种情况下说明无论是本地的还是全局的都没有空闲的g
 		return nil
 	}
+	// 计数器自减
 	pp.gFree.n--
 	if gp.stack.lo != 0 && gp.stack.hi-gp.stack.lo != uintptr(startingStackSize) {
+		// 这个g有可能是之前的复用的g，所以栈的大小可能不是预期的
+		// 把原有的栈释放掉
 		// Deallocate old stack. We kept it in gfput because it was the
 		// right size when the goroutine was put on the free list, but
 		// the right size has changed since then.
@@ -4706,6 +4714,7 @@ retry:
 			gp.stackguard0 = 0
 		})
 	}
+	// 重新分配一个栈
 	if gp.stack.lo == 0 {
 		// Stack was deallocated in gfput or just above. Allocate a new one.
 		systemstack(func() {
