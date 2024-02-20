@@ -11,39 +11,59 @@ import (
 	"unsafe"
 )
 
+// Pool 是一个临时对象的集合，这些对象可能会被单独保存和检索。
 // A Pool is a set of temporary objects that may be individually saved and
 // retrieved.
 //
+// 任何存储在 Pool 中的项目都可能在没有通知的情况下随时被自动删除。
+// 如果 Pool 在这种情况下保存了唯一的引用，那么该项目可能会被释放。
 // Any item stored in the Pool may be removed automatically at any time without
 // notification. If the Pool holds the only reference when this happens, the
 // item might be deallocated.
 //
+// Pool 是并发安全的，可以同时被多个 goroutine 使用。
 // A Pool is safe for use by multiple goroutines simultaneously.
 //
+// Pool 的目的是缓存已分配但未使用的项目，以便以后重用，从而减轻垃圾回收器的压力。
+// 也就是说，它可以轻松地构建高效的、线程安全的空闲列表。但它并不适用于所有的空闲列表。
 // Pool's purpose is to cache allocated but unused items for later reuse,
 // relieving pressure on the garbage collector. That is, it makes it easy to
 // build efficient, thread-safe free lists. However, it is not suitable for all
 // free lists.
 //
+// 适当的使用 Pool 是管理一组临时项目，这些项目在包的并发独立客户端之间静默共享，并且可能被重用。
+// Pool 提供了一种在许多客户端之间分摊分配开销的方法。
 // An appropriate use of a Pool is to manage a group of temporary items
 // silently shared among and potentially reused by concurrent independent
 // clients of a package. Pool provides a way to amortize allocation overhead
 // across many clients.
 //
+// fmt 包是 Pool 的一个很好的使用示例，它维护了一个临时输出缓冲区的动态大小存储。
+// 在负载下（当许多 goroutine 正在活跃地打印）时，存储会扩展，而在静止时会收缩。
 // An example of good use of a Pool is in the fmt package, which maintains a
 // dynamically-sized store of temporary output buffers. The store scales under
 // load (when many goroutines are actively printing) and shrinks when
 // quiescent.
 //
+// 另一方面，作为短期对象的一部分维护的空闲列表不适合使用 Pool，因为在这种情况下，开销不会很好地摊销。
+// 对于这样的对象，实现自己的空闲列表会更有效。
 // On the other hand, a free list maintained as part of a short-lived object is
 // not a suitable use for a Pool, since the overhead does not amortize well in
 // that scenario. It is more efficient to have such objects implement their own
 // free list.
 //
+// Pool 在第一次使用后不得被复制。
 // A Pool must not be copied after first use.
 //
+<<<<<<< HEAD
 // In the terminology of [the Go memory model], a call to Put(x) “synchronizes before”
 // a call to [Pool.Get] returning that same value x.
+=======
+// 在go内存模型的术语中，对 Put(x) 的调用“在”返回相同值 x 的 Get 调用之前同步。
+// 类似地，对 New 返回 x 的调用“在”返回相同值 x 的 Get 调用之前同步。
+// In the terminology of the Go memory model, a call to Put(x) “synchronizes before”
+// a call to Get returning that same value x.
+>>>>>>> 5b50b0b0d3 (some comment)
 // Similarly, a call to New returning x “synchronizes before”
 // a call to Get returning that same value x.
 //
@@ -51,22 +71,31 @@ import (
 type Pool struct {
 	noCopy noCopy
 
-	local     unsafe.Pointer // local fixed-size per-P pool, actual type is [P]poolLocal
-	localSize uintptr        // size of the local array
+	// local 是一个固定大小的每个 P 池，实际类型是 [P] poolLocal
+	local unsafe.Pointer // local fixed-size per-P pool, actual type is [P]poolLocal
+	// localSize 是 local 的大小
+	localSize uintptr // size of the local array
 
-	victim     unsafe.Pointer // local from previous cycle
-	victimSize uintptr        // size of victims array
+	// victim 是一个可变大小的全局池，实际类型是 []*poolLocal
+	victim unsafe.Pointer // local from previous cycle
+	// victimSize 是 victim 的大小
+	victimSize uintptr // size of victims array
 
+	// New 是一个可选的函数，用于在 Get 返回 nil 时生成一个值。
+	// 在调用 Get 期间，它可能不会被并发更改。
 	// New optionally specifies a function to generate
 	// a value when Get would otherwise return nil.
 	// It may not be changed concurrently with calls to Get.
 	New func() any
 }
 
+// 每个 P 的本地池
 // Local per-P Pool appendix.
 type poolLocalInternal struct {
-	private any       // Can be used only by the respective P.
-	shared  poolChain // Local P can pushHead/popHead; any P can popTail.
+	// private 只能被各自的 P 使用
+	private any // Can be used only by the respective P.
+	// 本地的P可以pushHead/popHead; 任何P都可以popTail
+	shared poolChain // Local P can pushHead/popHead; any P can popTail.
 }
 
 type poolLocal struct {
