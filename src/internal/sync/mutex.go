@@ -3,9 +3,13 @@
 // license that can be found in the LICENSE file.
 
 // Package sync provides basic synchronization primitives such as mutual
-// exclusion locks to internal packages (including ones that depend on sync).
+// exclusion locks to internal packages (including ones that depend on sync)
+//
+// sync 包给引用了sync的内部的包提供了基本的同步原语，比如互斥排他锁
 //
 // Tests are defined in package [sync].
+//
+// 单元测试定义在包sync中
 package sync
 
 import (
@@ -16,7 +20,11 @@ import (
 
 // A Mutex is a mutual exclusion lock.
 //
+// # Mutex 是一把互斥排他锁
+//
 // See package [sync.Mutex] documentation.
+//
+// 见包 sync.Mutex 的文档
 type Mutex struct {
 	state int32
 	sema  uint32
@@ -29,6 +37,7 @@ const (
 	mutexWaiterShift = iota
 
 	// Mutex fairness.
+	// 锁的公平性
 	//
 	// Mutex can be in 2 modes of operations: normal and starvation.
 	// In normal mode waiters are queued in FIFO order, but a woken up waiter
@@ -39,11 +48,18 @@ const (
 	// of the wait queue. If a waiter fails to acquire the mutex for more than 1ms,
 	// it switches mutex to the starvation mode.
 	//
+	// Mutex 有两种操作模式：正常 和 饥饿
+	// 正常模式下，等锁者在一个先进先出的队列中，但是一个被唤醒的等锁者并不持有互斥锁而是与
+	// 新到达的goroutine争夺所有权，新到达的goroutine有一项优势：它们已经在CPU上执行，并且
+	// 可以有大量的新到达的goroutine，所以一个被唤醒的等锁者很有可能会输掉竞争。在这种情况下，
+	// 该等锁者会被排在队列的前面。如果某个等锁者申请锁失败并且超过1ms，锁会切换到饥饿模式。
+	//
 	// In starvation mode ownership of the mutex is directly handed off from
 	// the unlocking goroutine to the waiter at the front of the queue.
 	// New arriving goroutines don't try to acquire the mutex even if it appears
 	// to be unlocked, and don't try to spin. Instead they queue themselves at
 	// the tail of the wait queue.
+	// 在饥饿模式下，锁会直接
 	//
 	// If a waiter receives ownership of the mutex and sees that either
 	// (1) it is the last waiter in the queue, or (2) it waited for less than 1 ms,
