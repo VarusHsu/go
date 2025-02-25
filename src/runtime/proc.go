@@ -4994,7 +4994,6 @@ func syscall_runtime_AfterExec() {
 	execLock.unlock()
 }
 
-// 分配一个足够大的栈内存的新的g，
 // Allocate a new g, with a stack big enough for stacksize bytes.
 func malg(stacksize int32) *g {
 	newg := new(g)
@@ -5030,18 +5029,10 @@ func newproc(fn *funcval) {
 	})
 }
 
-<<<<<<< HEAD
 // Create a new g in state _Grunnable (or _Gwaiting if parked is true), starting at fn.
 // callerpc is the address of the go statement that created this. The caller is responsible
 // for adding the new g to the scheduler. If parked is true, waitreason must be non-zero.
 func newproc1(fn *funcval, callergp *g, callerpc uintptr, parked bool, waitreason waitReason) *g {
-=======
-// 这个地方是 go func(){...}() 的实现
-// Create a new g in state _Grunnable, starting at fn. callerpc is the
-// address of the go statement that created this. The caller is responsible
-// for adding the new g to the scheduler.
-func newproc1(fn *funcval, callergp *g, callerpc uintptr) *g {
->>>>>>> 5b50b0b0d3 (some comment)
 	if fn == nil {
 		fatal("go of nil func value")
 	}
@@ -5234,8 +5225,6 @@ func gfput(pp *p, gp *g) {
 // If local list is empty, grab a batch from global list.
 func gfget(pp *p) *g {
 retry:
-	// 查看当前的p是否有空闲的g（状态为Gdead）
-	// 如果没有，那么就从全局的sched中获取一批(32个)
 	if pp.gFree.empty() && (!sched.gFree.stack.empty() || !sched.gFree.noStack.empty()) {
 		lock(&sched.gFree.lock)
 		// Move a batch of free Gs to the P.
@@ -5257,7 +5246,6 @@ retry:
 	}
 	gp := pp.gFree.pop()
 	if gp == nil {
-		// 这种情况下说明无论是本地的还是全局的都没有空闲的g
 		return nil
 	}
 	// 计数器自减

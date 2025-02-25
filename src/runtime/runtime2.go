@@ -401,13 +401,6 @@ type g struct {
 	// stackguard1 is the stack pointer compared in the //go:systemstack stack growth prologue.
 	// It is stack.lo+StackGuard on g0 and gsignal stacks.
 	// It is ~0 on other goroutine stacks, to trigger a call to morestackc (and crash).
-	// 栈参数
-	// stack描述实际的栈内存：[stack.lo, stack.hi)。
-	// stackguard0是Go栈增长序言中比较的栈指针。
-	// 通常是stack.lo+StackGuard，但可以是StackPreempt以触发抢占。
-	// stackguard1是C栈增长序言中比较的栈指针。
-	// 在g0和gsignal栈上是stack.lo+StackGuard。
-	// 在其他goroutine栈上是~0，以触发对morestackc的调用（并崩溃）。
 	stack       stack   // offset known to runtime/cgo
 	stackguard0 uintptr // offset known to liblink
 	stackguard1 uintptr // offset known to liblink
